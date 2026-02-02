@@ -34,3 +34,11 @@ Thumbs.db
 # Credentials
 credentials.json
 token.json
+langgraph.json
+railway.json
+
+# Test files
+test.ipynb
+
+# LangGraph
+.langgraph_api/

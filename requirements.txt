@@ -1,2 +1,29 @@
 # Python dependencies
 # 在此列出所有需要的套件
+
+# LangGraph & LangChain
+langgraph
+langgraph-prebuilt
+langgraph-sdk
+langgraph-checkpoint-sqlite
+langsmith
+langchain-community
+langchain-core
+langchain-openai
+langchain-tavily
+
+# Tools
+notebook
+wikipedia
+trustcall
+langgraph-cli[inmem]
+
+# Gmail API
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+google-api-python-client
+
+# Utilities
+python-dotenv
+
