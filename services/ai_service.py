@@ -39,8 +39,8 @@ def classify_importance(emails: list[dict]) -> dict:
         Respond with one of the following categories only: "High", "Medium", "Low".
         Definitions:
         - High: The email is urgent, interview invitation, useful information about career like hackathons or course or competition, or from NYU professors' course announcements.
-        - Medium: The email is important but does not require immediate action. Such as routine emails from NYU, colleagues, friends, or family members, or auto-response from job website like 104.
-        - Low: The email is not important, such as newsletters or promotional content, or emails from Airbnb and Binance or other similar companies.
+        - Medium: The email is important but does not require immediate action. Such as routine emails from NYU, colleagues, friends, or family members, or auto-response from job website like 104 website.
+        - Low: The email is not important, such as newsletters or promotional content, or emails from Airbnb and Binance or other similar companies, or random people who want to connect with me on LinkedIn.
         """
 
     llm = ChatOpenAI(model="gpt-4o")

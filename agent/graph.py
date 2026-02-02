@@ -116,32 +116,38 @@ def summarize_content(state: EmailSummaryState) -> dict:
 
 def generate_report(state: EmailSummaryState) -> dict:
     """生成最終報告"""
+    import datetime
     summaries = state.get('email_summaries', {})
     raw_emails = state.get('raw_emails', [])
+    classified_emails = state.get('classified_emails', {})
 
     summary_text = summaries.get('summary', '')
-    importance_count = summaries.get('importance_count', {})
-    important_emails = summaries.get('important_emails', [])
+
+    # 計算各類別郵件數量
+    high_emails = classified_emails.get('high', [])
+    medium_emails = classified_emails.get('medium', [])
+    low_emails = classified_emails.get('low', [])
 
     report = "# 每日郵件摘要\n\n"
     report += f"**時間範圍**: {state.get('time_range', 'N/A')}\n\n"
+    report += f"**執行日期**: {datetime.datetime.now().strftime('%Y-%m-%d')}\n\n"
     report += f"**總郵件數**: {len(raw_emails)}\n\n"
 
     report += "## 重要性統計\n\n"
-    report += f"- 高重要性: {importance_count.get('high', 0)} 封\n"
-    report += f"- 中重要性: {importance_count.get('medium', 0)} 封\n"
-    report += f"- 低重要性: {importance_count.get('low', 0)} 封\n\n"
+    report += f"- 高重要性: {len(high_emails)} 封\n"
+    report += f"- 中重要性: {len(medium_emails)} 封\n"
+    report += f"- 低重要性: {len(low_emails)} 封\n\n"
 
     report += "## 摘要內容\n\n"
     report += f"{summary_text}\n\n"
 
-    if important_emails:
+    if high_emails:
         report += "## 重要郵件列表\n\n"
-        for email in important_emails:
-            report += f"- **{email['subject']}**\n"
-            report += f"  - 寄件者: {email['from']}\n"
-            if email.get('to'):
-                report += f"  - 收件者: {email['to']}\n"
+        for email in high_emails:
+            report += f"- **{email.get('subject', '無主旨')}**\n"
+            report += f"  - 寄件者: {email.get('from', '未知')}\n"
+            if email.get('date'):
+                report += f"  - 日期: {email.get('date')}\n"
             report += "\n"
 
     return {"final_report": report}
