@@ -26,4 +26,5 @@ google-api-python-client
 
 # Utilities
 python-dotenv
+requests
 

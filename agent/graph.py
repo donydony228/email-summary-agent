@@ -152,13 +152,14 @@ def generate_report(state: EmailSummaryState) -> dict:
 
     return {"final_report": report}
 
-def send_notification(_state: EmailSummaryState) -> dict:
+def send_notification(state: EmailSummaryState) -> dict:
     """發送通知"""
-    # TODO: 發送到 Slack
-    # from services.slack_service import send_slack_notification
-    # success = send_slack_notification(_state['final_report'])
+    from services.slack_service import send_slack_notification
 
-    return {"report_sent": True}
+    final_report = state.get('final_report', '')
+    success = send_slack_notification(final_report)
+
+    return {"report_sent": success}
 
 
 # Build graph
