@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+
+# Credentials
+credentials/
+
+# Test files
+test.ipynb
+
+# LangGraph
+.langgraph_api/
+
+# Environment (use Railway env vars instead)
+.env
+
+# Other
+README.md
+.dockerignore
