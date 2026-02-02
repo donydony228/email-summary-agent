@@ -26,13 +26,14 @@
 
 ### 2. 組織憑證檔案
 
-將下載的憑證檔案重新命名並放到專案根目錄：
+將下載的憑證檔案重新命名並放到 `credentials/` 資料夾：
 
 ```
 email-summary-agent/
-├── credentials_account1.json  # 個人信箱的憑證
-├── credentials_account2.json  # 工作信箱的憑證
-├── credentials_account3.json  # 其他信箱的憑證
+├── credentials/
+│   ├── credentials_account1.json  # 個人信箱的憑證
+│   ├── credentials_account2.json  # 工作信箱的憑證
+│   └── credentials_account3.json  # 其他信箱的憑證
 └── ...
 ```
 
@@ -45,7 +46,7 @@ email-summary-agent/
 ### 帳號 1（個人信箱）
 
 ```bash
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account1.json', 'token_account1.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account1.json', 'credentials/token_account1.json')"
 ```
 
 瀏覽器會開啟，選擇你的**第一個 Gmail 帳號**進行授權。
@@ -54,7 +55,7 @@ python -c "from services.gmail_service import authenticate; authenticate('creden
 ### 帳號 2（工作信箱）
 
 ```bash
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account2.json', 'token_account2.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account2.json', 'credentials/token_account2.json')"
 ```
 
 選擇你的**第二個 Gmail 帳號**進行授權。
@@ -63,7 +64,7 @@ python -c "from services.gmail_service import authenticate; authenticate('creden
 ### 帳號 3（其他信箱）
 
 ```bash
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account3.json', 'token_account3.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account3.json', 'credentials/token_account3.json')"
 ```
 
 選擇你的**第三個 Gmail 帳號**進行授權。
@@ -73,12 +74,13 @@ python -c "from services.gmail_service import authenticate; authenticate('creden
 
 ```
 email-summary-agent/
-├── credentials_account1.json
-├── credentials_account2.json
-├── credentials_account3.json
-├── token_account1.json        ← 自動生成
-├── token_account2.json        ← 自動生成
-├── token_account3.json        ← 自動生成
+├── credentials/
+│   ├── credentials_account1.json
+│   ├── credentials_account2.json
+│   ├── credentials_account3.json
+│   ├── token_account1.json        ← 自動生成
+│   ├── token_account2.json        ← 自動生成
+│   └── token_account3.json        ← 自動生成
 └── ...
 ```
 
@@ -93,18 +95,18 @@ from services.gmail_service import fetch_emails_from_multiple_accounts
 accounts = [
     {
         'label': '個人信箱',
-        'credentials_path': 'credentials_account1.json',
-        'token_path': 'token_account1.json'
+        'credentials_path': 'credentials/credentials_account1.json',
+        'token_path': 'credentials/token_account1.json'
     },
     {
         'label': '工作信箱',
-        'credentials_path': 'credentials_account2.json',
-        'token_path': 'token_account2.json'
+        'credentials_path': 'credentials/credentials_account2.json',
+        'token_path': 'credentials/token_account2.json'
     },
     {
         'label': '其他信箱',
-        'credentials_path': 'credentials_account3.json',
-        'token_path': 'token_account3.json'
+        'credentials_path': 'credentials/credentials_account3.json',
+        'token_path': 'credentials/token_account3.json'
     }
 ]
 
@@ -146,18 +148,18 @@ def fetch_emails(state: EmailSummaryState) -> dict:
     accounts = [
         {
             'label': '個人',
-            'credentials_path': 'credentials_account1.json',
-            'token_path': 'token_account1.json'
+            'credentials_path': 'credentials/credentials_account1.json',
+            'token_path': 'credentials/token_account1.json'
         },
         {
             'label': '工作',
-            'credentials_path': 'credentials_account2.json',
-            'token_path': 'token_account2.json'
+            'credentials_path': 'credentials/credentials_account2.json',
+            'token_path': 'credentials/token_account2.json'
         },
         {
             'label': '其他',
-            'credentials_path': 'credentials_account3.json',
-            'token_path': 'token_account3.json'
+            'credentials_path': 'credentials/credentials_account3.json',
+            'token_path': 'credentials/token_account3.json'
         }
     ]
 
@@ -192,18 +194,18 @@ def fetch_emails(state: EmailSummaryState) -> dict:
 GMAIL_ACCOUNTS='[
   {
     "label": "個人",
-    "credentials_path": "credentials_account1.json",
-    "token_path": "token_account1.json"
+    "credentials_path": "credentials/credentials_account1.json",
+    "token_path": "credentials/token_account1.json"
   },
   {
     "label": "工作",
-    "credentials_path": "credentials_account2.json",
-    "token_path": "token_account2.json"
+    "credentials_path": "credentials/credentials_account2.json",
+    "token_path": "credentials/token_account2.json"
   },
   {
     "label": "其他",
-    "credentials_path": "credentials_account3.json",
-    "token_path": "token_account3.json"
+    "credentials_path": "credentials/credentials_account3.json",
+    "token_path": "credentials/token_account3.json"
   }
 ]'
 ```
@@ -293,15 +295,15 @@ Gmail API 免費配額是每天 250 quota units/user。
 accounts = [
     {
         'label': '個人',
-        'credentials_path': 'credentials_account1.json',
-        'token_path': 'token_account1.json',
+        'credentials_path': 'credentials/credentials_account1.json',
+        'token_path': 'credentials/token_account1.json',
         'time_range': '24h',  # 個人信箱只看最近 24 小時
         'query': 'is:unread'  # 只看未讀
     },
     {
         'label': '工作',
-        'credentials_path': 'credentials_account2.json',
-        'token_path': 'token_account2.json',
+        'credentials_path': 'credentials/credentials_account2.json',
+        'token_path': 'credentials/token_account2.json',
         'time_range': '7d',   # 工作信箱看最近 7 天
         'query': ''
     }

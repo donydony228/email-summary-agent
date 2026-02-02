@@ -31,14 +31,10 @@ Thumbs.db
 *.db
 *.sqlite
 
-# Credentials
-credentials_account1.json
-credentials_account2.json
-credentials_account3.json
-token_account1.json
-token_account2.json
-token_account3.json
-token.json
+# Credentials (整個資料夾)
+credentials/
+
+# 其他敏感檔案
 langgraph.json
 railway.json
 *.json

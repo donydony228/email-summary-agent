@@ -22,16 +22,19 @@
 
 ## 步驟 2: 重新命名憑證檔案
 
-將下載的 JSON 檔案重新命名並放到專案根目錄：
+將下載的 JSON 檔案重新命名並放到 `credentials/` 資料夾：
 
 ```bash
 # 專案根目錄
 cd /path/to/email-summary-agent
 
-# 重新命名憑證檔案
-mv ~/Downloads/client_secret_XXX1.json credentials_account1.json
-mv ~/Downloads/client_secret_XXX2.json credentials_account2.json
-mv ~/Downloads/client_secret_XXX3.json credentials_account3.json
+# 建立 credentials 資料夾（如果還沒有的話）
+mkdir -p credentials
+
+# 重新命名並移動憑證檔案
+mv ~/Downloads/client_secret_XXX1.json credentials/credentials_account1.json
+mv ~/Downloads/client_secret_XXX2.json credentials/credentials_account2.json
+mv ~/Downloads/client_secret_XXX3.json credentials/credentials_account3.json
 ```
 
 ## 步驟 3: 授權每個帳號
@@ -40,13 +43,13 @@ mv ~/Downloads/client_secret_XXX3.json credentials_account3.json
 
 ```bash
 # 授權第一個帳號（個人信箱）
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account1.json', 'token_account1.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account1.json', 'credentials/token_account1.json')"
 
 # 授權第二個帳號（工作信箱）
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account2.json', 'token_account2.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account2.json', 'credentials/token_account2.json')"
 
 # 授權第三個帳號（其他信箱）
-python -c "from services.gmail_service import authenticate; authenticate('credentials_account3.json', 'token_account3.json')"
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_account3.json', 'credentials/token_account3.json')"
 ```
 
 **注意**：每次授權時，確保在瀏覽器中選擇**正確的 Gmail 帳號**！
@@ -54,12 +57,13 @@ python -c "from services.gmail_service import authenticate; authenticate('creden
 完成後，你會看到以下檔案：
 
 ```
-✅ credentials_account1.json
-✅ credentials_account2.json
-✅ credentials_account3.json
-✅ token_account1.json        (自動生成)
-✅ token_account2.json        (自動生成)
-✅ token_account3.json        (自動生成)
+credentials/
+├── ✅ credentials_account1.json
+├── ✅ credentials_account2.json
+├── ✅ credentials_account3.json
+├── ✅ token_account1.json        (自動生成)
+├── ✅ token_account2.json        (自動生成)
+└── ✅ token_account3.json        (自動生成)
 ```
 
 ## 步驟 4: 測試多帳號功能
@@ -126,18 +130,18 @@ langgraph dev
 accounts = [
     {
         'label': '個人',
-        'credentials_path': 'credentials_account1.json',
-        'token_path': 'token_account1.json'
+        'credentials_path': 'credentials/credentials_account1.json',
+        'token_path': 'credentials/token_account1.json'
     },
     {
         'label': '工作',
-        'credentials_path': 'credentials_account2.json',
-        'token_path': 'token_account2.json'
+        'credentials_path': 'credentials/credentials_account2.json',
+        'token_path': 'credentials/token_account2.json'
     },
     {
         'label': '其他',
-        'credentials_path': 'credentials_account3.json',
-        'token_path': 'token_account3.json'
+        'credentials_path': 'credentials/credentials_account3.json',
+        'token_path': 'credentials/token_account3.json'
     }
 ]
 ```
@@ -169,8 +173,8 @@ accounts = [
 
 ```bash
 # 刪除 token 並重新授權
-rm token_accountX.json
-python -c "from services.gmail_service import authenticate; authenticate('credentials_accountX.json', 'token_accountX.json')"
+rm credentials/token_accountX.json
+python -c "from services.gmail_service import authenticate; authenticate('credentials/credentials_accountX.json', 'credentials/token_accountX.json')"
 ```
 
 ### 問題 2: 找不到憑證檔案
@@ -178,7 +182,7 @@ python -c "from services.gmail_service import authenticate; authenticate('creden
 確保檔案在正確的位置：
 
 ```bash
-ls -la credentials_*.json token_*.json
+ls -la credentials/
 ```
 
 應該看到所有 6 個檔案。
@@ -207,14 +211,14 @@ ls -la credentials_*.json token_*.json
 accounts = [
     {
         'label': '個人',
-        'credentials_path': 'credentials_account1.json',
-        'token_path': 'token_account1.json',
+        'credentials_path': 'credentials/credentials_account1.json',
+        'token_path': 'credentials/token_account1.json',
         'query': 'is:unread',  # 只獲取未讀郵件
     },
     {
         'label': '工作',
-        'credentials_path': 'credentials_account2.json',
-        'token_path': 'token_account2.json',
+        'credentials_path': 'credentials/credentials_account2.json',
+        'token_path': 'credentials/token_account2.json',
         'query': 'from:boss@company.com OR from:client@company.com',  # 只獲取特定寄件者
     },
 ]

@@ -66,18 +66,18 @@ def fetch_emails(state: EmailSummaryState) -> dict:
         accounts = [
             {
                 'label': '個人',
-                'credentials_path': 'credentials_account1.json',
-                'token_path': 'token_account1.json'
+                'credentials_path': 'credentials/credentials_account1.json',
+                'token_path': 'credentials/token_account1.json'
             },
             {
                 'label': '工作',
-                'credentials_path': 'credentials_account2.json',
-                'token_path': 'token_account2.json'
+                'credentials_path': 'credentials/credentials_account2.json',
+                'token_path': 'credentials/token_account2.json'
             },
             {
                 'label': '紐約大學',
-                'credentials_path': 'credentials_account3.json',
-                'token_path': 'token_account3.json'
+                'credentials_path': 'credentials/credentials_account3.json',
+                'token_path': 'credentials/token_account3.json'
             }
         ]
 
