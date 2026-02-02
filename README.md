@@ -13,18 +13,20 @@
 
 ## 功能特色
 
-- **智能分類**：使用 Claude AI 自動判斷郵件重要性
+- **智能分類**：使用 AI 自動判斷郵件重要性
 - **精準摘要**：提取關鍵資訊，節省閱讀時間
 - **工作流程管理**：使用 LangGraph 構建可視化、可維護的 Agent 流程
 - **多渠道通知**：支援 Slack、Email 等多種通知方式
-- **易於部署**：支援 Railway 一鍵部署
-- **定時執行**：可設定 Cron Job 定期執行
+- **易於部署**：使用 GitHub Actions 免費部署
+- **定時執行**：每日自動執行，無需維護服務器
 
 ## 專案結構
 
 ```
 email-summary-agent/
-├── main.py                      # FastAPI 主程式
+├── main.py                      # 主執行腳本
+├── init_credentials.py          # Credentials 初始化
+├── encode_credentials.py        # Base64 編碼工具
 ├── agent/
 │   ├── __init__.py
 │   ├── graph.py                # LangGraph 工作流程定義
@@ -33,13 +35,14 @@ email-summary-agent/
 ├── services/
 │   ├── __init__.py
 │   ├── gmail_service.py        # Gmail API 服務
-│   ├── claude_service.py       # Claude API 服務
+│   ├── ai_service.py           # AI 分類與摘要服務
 │   └── slack_service.py        # Slack 通知服務
+├── .github/
+│   └── workflows/
+│       └── email-summary.yml   # GitHub Actions 工作流程
 ├── .env.example                # 環境變數範例
 ├── .gitignore
-├── requirements.txt            # Python 依賴套件
-├── Procfile                    # Railway 部署配置
-└── railway.json                # Railway Cron 設定
+└── requirements.txt            # Python 依賴套件
 ```
 
 ## 系統架構
@@ -165,54 +168,23 @@ API 文件：訪問 `http://localhost:8000/docs` 查看 Swagger UI
 
 ## 部署
 
-### 部署到 Railway
+### 推薦：使用 GitHub Actions（永久免費）
 
-1. **準備部署檔案**
+GitHub Actions 是最推薦的部署方式，完全免費且易於設置。
 
-`Procfile`：
-```
-web: uvicorn main:app --host 0.0.0.0 --port $PORT
-```
+詳細部署步驟請參考：[GitHub Actions 部署指南](GITHUB_ACTIONS_GUIDE.md)
 
-`railway.json`（設定 Cron Job）：
-```json
-{
-  "build": {
-    "builder": "NIXPACKS"
-  },
-  "deploy": {
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  }
-}
-```
+**快速步驟：**
+1. 運行 `python encode_credentials.py` 生成 base64 編碼的 credentials
+2. 在 GitHub 倉庫設定 Secrets（Settings → Secrets and variables → Actions）
+3. 推送代碼到 GitHub
+4. Workflow 會自動每天執行
 
-2. **部署步驟**
-
-```bash
-# 安裝 Railway CLI
-npm i -g @railway/cli
-
-# 登入
-railway login
-
-# 初始化專案
-railway init
-
-# 部署
-railway up
-```
-
-3. **設定環境變數**
-
-在 Railway Dashboard 中設定所有必要的環境變數（參考 `.env.example`）
-
-4. **設定定時任務**
-
-在 Railway 中建立 Cron Job，例如每日早上 9 點執行：
-```
-0 9 * * * curl -X POST https://your-app.railway.app/api/summarize
-```
+**優勢：**
+- 完全免費（每月 2000 分鐘）
+- 無需信用卡
+- 自動執行，無需維護服務器
+- 易於調整執行時間
 
 ## 使用說明
 
@@ -233,19 +205,19 @@ railway up
 
 ## 技術棧
 
-- **框架**：FastAPI
 - **AI Agent**：LangGraph
-- **LLM**：Claude API (Anthropic)
+- **LLM**：OpenAI GPT-4o
 - **郵件服務**：Gmail API
 - **通知服務**：Slack Webhook
-- **部署平台**：Railway
+- **部署平台**：GitHub Actions
 
 ## 開發注意事項
 
-- 所有敏感資訊（API Keys、Tokens）都應存放在 `.env` 檔案中
+- 所有敏感資訊（API Keys、Tokens）都應存放在 `.env` 檔案和 GitHub Secrets 中
 - Gmail API 有配額限制，建議合理設定郵件獲取範圍
-- Claude API 按 Token 計費，注意控制摘要長度
+- OpenAI API 按 Token 計費，注意控制摘要長度
 - 建議使用虛擬環境隔離專案依賴
+- GitHub Actions 免費方案每月 2000 分鐘，足夠每日運行
 
 ## 授權
 

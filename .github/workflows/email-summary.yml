@@ -1,0 +1,50 @@
+name: Daily Email Summary
+
+on:
+  schedule:
+    # 每天 UTC 00:00 執行（台灣時間 08:00）
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 允許手動觸發
+
+jobs:
+  run-email-summary:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Initialize Gmail credentials
+      env:
+        GMAIL_MULTI_ACCOUNT: ${{ secrets.GMAIL_MULTI_ACCOUNT }}
+        GMAIL_CREDENTIALS_BASE64: ${{ secrets.GMAIL_CREDENTIALS_BASE64 }}
+        GMAIL_TOKEN_BASE64: ${{ secrets.GMAIL_TOKEN_BASE64 }}
+        GMAIL_CREDENTIALS_ACCOUNT1_BASE64: ${{ secrets.GMAIL_CREDENTIALS_ACCOUNT1_BASE64 }}
+        GMAIL_TOKEN_ACCOUNT1_BASE64: ${{ secrets.GMAIL_TOKEN_ACCOUNT1_BASE64 }}
+        GMAIL_CREDENTIALS_ACCOUNT2_BASE64: ${{ secrets.GMAIL_CREDENTIALS_ACCOUNT2_BASE64 }}
+        GMAIL_TOKEN_ACCOUNT2_BASE64: ${{ secrets.GMAIL_TOKEN_ACCOUNT2_BASE64 }}
+        GMAIL_CREDENTIALS_ACCOUNT3_BASE64: ${{ secrets.GMAIL_CREDENTIALS_ACCOUNT3_BASE64 }}
+        GMAIL_TOKEN_ACCOUNT3_BASE64: ${{ secrets.GMAIL_TOKEN_ACCOUNT3_BASE64 }}
+      run: python init_credentials.py
+    
+    - name: Run email summary
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+        LANGSMITH_TRACING_V2: ${{ secrets.LANGSMITH_TRACING_V2 }}
+        LANGSMITH_PROJECT: ${{ secrets.LANGSMITH_PROJECT }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        GMAIL_MULTI_ACCOUNT: ${{ secrets.GMAIL_MULTI_ACCOUNT }}
+        EMAIL_TIME_RANGE: ${{ secrets.EMAIL_TIME_RANGE || '24h' }}
+        MAX_EMAILS: ${{ secrets.MAX_EMAILS || '20' }}
+      run: python main.py
