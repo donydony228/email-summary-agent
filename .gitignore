@@ -32,10 +32,16 @@ Thumbs.db
 *.sqlite
 
 # Credentials
-credentials.json
+credentials_account1.json
+credentials_account2.json
+credentials_account3.json
+token_account1.json
+token_account2.json
+token_account3.json
 token.json
 langgraph.json
 railway.json
+*.json
 
 # Test files
 test.ipynb

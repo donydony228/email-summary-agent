@@ -49,17 +49,63 @@ def fetch_emails(state: EmailSummaryState) -> dict:
     """獲取郵件"""
     print("---Fetch Emails---")
 
-    # Debug: 顯示接收到的參數
     time_range = state.get('time_range', '24h')
     max_emails = state.get('max_emails', 20)
 
-    # Call Gmail API 獲取郵件
-    from services.gmail_service import fetch_emails_from_gmail
-    emails = fetch_emails_from_gmail(time_range, max_emails)
+    # 選擇使用單一帳號或多帳號模式
+    # 可以透過環境變數 GMAIL_MULTI_ACCOUNT=true 來啟用多帳號模式
+    import os
+    use_multi_account = os.getenv('GMAIL_MULTI_ACCOUNT', 'false').lower() == 'true'
 
-    # 確保不超過 max_emails（額外保護）
-    if len(emails) > max_emails:
-        emails = emails[:max_emails]
+    if use_multi_account:
+        # === 多帳號模式 ===
+        from services.gmail_service import fetch_emails_from_multiple_accounts
+
+        # 定義帳號配置
+        # 你可以根據需要修改這裡的配置
+        accounts = [
+            {
+                'label': '個人',
+                'credentials_path': 'credentials_account1.json',
+                'token_path': 'token_account1.json'
+            },
+            {
+                'label': '工作',
+                'credentials_path': 'credentials_account2.json',
+                'token_path': 'token_account2.json'
+            },
+            {
+                'label': '紐約大學',
+                'credentials_path': 'credentials_account3.json',
+                'token_path': 'token_account3.json'
+            }
+        ]
+
+        # 計算每個帳號應該獲取多少封郵件
+        max_per_account = (max_emails // len(accounts)) + 1
+
+        emails = fetch_emails_from_multiple_accounts(
+            accounts=accounts,
+            time_range=time_range,
+            max_emails_per_account=max_per_account,
+            query=''
+        )
+
+        # 確保總數不超過 max_emails
+        if len(emails) > max_emails:
+            emails = emails[:max_emails]
+
+        print(f"從 {len(accounts)} 個帳號共獲取 {len(emails)} 封郵件")
+
+    else:
+        # === 單一帳號模式（預設）===
+        from services.gmail_service import fetch_emails_from_gmail
+
+        emails = fetch_emails_from_gmail(time_range, max_emails)
+
+        # 確保不超過 max_emails（額外保護）
+        if len(emails) > max_emails:
+            emails = emails[:max_emails]
 
     return {"raw_emails": emails}
 
@@ -67,7 +113,7 @@ def classify_importance(state: EmailSummaryState) -> dict:
     """分類郵件重要性"""
     print("---Classify Importance---")
 
-    # TODO: 使用 AI API 進行智能分類
+    # Call AI Service 進行分類
     from services.ai_service import classify_importance
     classified = classify_importance(state['raw_emails'])
 

@@ -277,7 +277,8 @@ def fetch_emails_from_gmail(time_range: str = '24h',
                             max_emails: int = 50,
                             query: str = '',
                             credentials_path: str = 'credentials.json',
-                            token_path: str = 'token.json') -> List[Dict]:
+                            token_path: str = 'token.json',
+                            account_label: Optional[str] = None) -> List[Dict]:
     """
     從 Gmail 獲取郵件（完整流程）
 
@@ -287,13 +288,17 @@ def fetch_emails_from_gmail(time_range: str = '24h',
         query: Gmail 搜尋查詢
         credentials_path: OAuth 2.0 憑證檔案路徑
         token_path: Token 儲存路徑
+        account_label: 帳號標籤（用於多帳號場景）
 
     Returns:
         List[Dict]: 郵件列表
     """
-    # 從環境變數讀取路徑（如果有設定）
-    credentials_path = os.getenv('GMAIL_CREDENTIALS_PATH', credentials_path)
-    token_path = os.getenv('GMAIL_TOKEN_PATH', token_path)
+    # 只在使用預設值時才從環境變數讀取路徑
+    # 這樣多帳號模式下傳入的特定路徑不會被覆蓋
+    if credentials_path == 'credentials.json':
+        credentials_path = os.getenv('GMAIL_CREDENTIALS_PATH', credentials_path)
+    if token_path == 'token.json':
+        token_path = os.getenv('GMAIL_TOKEN_PATH', token_path)
 
     # 建立服務
     service = get_gmail_service(credentials_path, token_path)
@@ -301,7 +306,100 @@ def fetch_emails_from_gmail(time_range: str = '24h',
     # 獲取郵件
     emails = fetch_emails(service, time_range, max_emails, query)
 
+    # 如果有指定帳號標籤，添加到每封郵件中
+    if account_label:
+        for email in emails:
+            email['account'] = account_label
+
     return emails
+
+
+def fetch_emails_from_multiple_accounts(
+    accounts: List[Dict[str, str]],
+    time_range: str = '24h',
+    max_emails_per_account: int = 50,
+    query: str = ''
+) -> List[Dict]:
+    """
+    從多個 Gmail 帳號獲取郵件
+
+    Args:
+        accounts: 帳號配置列表，每個元素包含:
+            {
+                'label': '帳號標籤（例如：個人、工作、其他）',
+                'credentials_path': 'credentials 檔案路徑',
+                'token_path': 'token 檔案路徑'
+            }
+        time_range: 時間範圍 ("24h", "7d", "30d" 等)
+        max_emails_per_account: 每個帳號最多獲取郵件數
+        query: Gmail 搜尋查詢（套用到所有帳號）
+
+    Returns:
+        List[Dict]: 所有帳號的郵件列表（合併）
+
+    Example:
+        accounts = [
+            {
+                'label': '個人',
+                'credentials_path': 'credentials_account1.json',
+                'token_path': 'token_account1.json'
+            },
+            {
+                'label': '工作',
+                'credentials_path': 'credentials_account2.json',
+                'token_path': 'token_account2.json'
+            },
+            {
+                'label': '其他',
+                'credentials_path': 'credentials_account3.json',
+                'token_path': 'token_account3.json'
+            }
+        ]
+        emails = fetch_emails_from_multiple_accounts(accounts, time_range='7d')
+    """
+    all_emails = []
+
+    print(f"\n{'=' * 60}")
+    print(f"從 {len(accounts)} 個帳號獲取郵件")
+    print(f"{'=' * 60}\n")
+
+    for i, account in enumerate(accounts, 1):
+        label = account.get('label', f'Account {i}')
+        credentials_path = account.get('credentials_path')
+        token_path = account.get('token_path')
+
+        if not credentials_path or not token_path:
+            print(f"帳號 [{label}] 缺少必要設定，跳過")
+            continue
+
+        print(f"[{i}/{len(accounts)}] 正在獲取帳號: {label}")
+        print(f"   Credentials: {credentials_path}")
+        print(f"   Email name: {label}")
+        print(f"   Token: {token_path}")
+
+        try:
+            # 獲取該帳號的郵件
+            emails = fetch_emails_from_gmail(
+                time_range=time_range,
+                max_emails=max_emails_per_account,
+                query=query,
+                credentials_path=credentials_path,
+                token_path=token_path,
+                account_label=label
+            )
+
+            all_emails.extend(emails)
+            print(f"帳號 [{label}] 獲取成功: {len(emails)} 封郵件\n")
+
+        except Exception as e:
+            print(f"帳號 [{label}] 獲取失敗: {e}\n")
+            continue
+
+    print(f"{'=' * 60}")
+    print(f"總共獲取: {len(all_emails)} 封郵件")
+    print(f"{'=' * 60}\n")
+
+    return all_emails
 
 
 # 測試用主程式
@@ -310,29 +408,97 @@ if __name__ == '__main__':
     測試 Gmail API
 
     使用方式:
+
+    # 測試單一帳號
     python services/gmail_service.py
+
+    # 測試多個帳號（需要先設定好各帳號的憑證）
+    python services/gmail_service.py --multi
     """
-    print("=" * 60)
-    print("Gmail API 測試")
-    print("=" * 60)
+    import sys
 
-    # 測試認證
-    try:
-        emails = fetch_emails_from_gmail(
-            time_range='25h',  # 最近 25 小時
-            max_emails=100,    # 最多 100 封
-            query='',         # 不額外篩選
-        )
+    # 檢查是否要測試多帳號
+    test_multi_accounts = '--multi' in sys.argv
 
+    if test_multi_accounts:
         print("\n" + "=" * 60)
-        print("郵件摘要:")
-        print("=" * 60)
+        print("多帳號 Gmail API 測試")
+        print("=" * 60 + "\n")
 
-        for i, email in enumerate(emails, 1):
-            print(f"\n[{i}] {email['subject']}")
-            print(f"    寄件者: {email['from']}")
-            print(f"    日期: {email['date']}")
-            print(f"    預覽: {email['snippet'][:100]}...")
+        # 定義多個帳號配置
+        accounts = [
+            {
+                'label': '個人信箱',
+                'credentials_path': 'credentials_account1.json',
+                'token_path': 'token_account1.json'
+            },
+            {
+                'label': '工作信箱',
+                'credentials_path': 'credentials_account2.json',
+                'token_path': 'token_account2.json'
+            },
+            {
+                'label': '其他信箱',
+                'credentials_path': 'credentials_account3.json',
+                'token_path': 'token_account3.json'
+            }
+        ]
 
-    except Exception as e:
-        print(f"測試失敗: {e}")
+        try:
+            # 從所有帳號獲取郵件
+            all_emails = fetch_emails_from_multiple_accounts(
+                accounts=accounts,
+                time_range='24h',
+                max_emails_per_account=20,
+                query=''
+            )
+
+            # 顯示郵件摘要（按帳號分組）
+            print("\n" + "=" * 60)
+            print("郵件摘要（按帳號分組）:")
+            print("=" * 60)
+
+            # 按帳號分組顯示
+            for account_config in accounts:
+                label = account_config['label']
+                account_emails = [e for e in all_emails if e.get('account') == label]
+
+                if account_emails:
+                    print(f"\n{label} ({len(account_emails)} 封)")
+                    print("-" * 60)
+                    for i, email in enumerate(account_emails[:5], 1):  # 只顯示前 5 封
+                        print(f"  [{i}] {email['subject'][:50]}")
+                        print(f"      寄件者: {email['from'][:40]}")
+                        print(f"      日期: {email['date']}")
+
+            print("\n" + "=" * 60)
+            print(f"總計: {len(all_emails)} 封郵件")
+            print("=" * 60)
+
+        except Exception as e:
+            print(f"測試失敗: {e}")
+
+    else:
+        print("\n" + "=" * 60)
+        print("單一帳號 Gmail API 測試")
+        print("=" * 60 + "\n")
+
+        try:
+            emails = fetch_emails_from_gmail(
+                time_range='24h',
+                max_emails=20,
+                query='',
+            )
+
+            print("\n" + "=" * 60)
+            print("郵件摘要:")
+            print("=" * 60)
+
+            for i, email in enumerate(emails, 1):
+                print(f"\n[{i}] {email['subject']}")
+                print(f"    寄件者: {email['from']}")
+                print(f"    日期: {email['date']}")
+                print(f"    預覽: {email['snippet'][:100]}...")
+
+        except Exception as e:
+            print(f"測試失敗: {e}")
