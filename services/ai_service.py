@@ -31,9 +31,14 @@ def classify_importance(emails: list[dict]) -> dict:
         emails: 郵件列表
 
     Returns:
-        dict: {"high": [...], "medium": [...], "low": [...]}
+        dict: {"high": [...], "medium": [], "low": [...]}
     """
     raw_emails = emails
+
+    # 如果沒有郵件，直接返回空分類
+    if not raw_emails:
+        return {"high": [], "medium": [], "low": []}
+
     prompt = """
         You are a helpful personal assistant. Please help me classify the importance of the following email: {email_content}.
         Respond with one of the following categories only: "High", "Medium", "Low".
@@ -60,8 +65,10 @@ def classify_importance(emails: list[dict]) -> dict:
 
     classified = {"high": [], "medium": [], "low": []}
     for classification in result.classifications:
-        email = next(e for e in raw_emails if e['id'] == classification.email_id)
-        classified[classification.importance].append(email)
+        # 使用 next 的 default 參數避免 StopIteration
+        email = next((e for e in raw_emails if e['id'] == classification.email_id), None)
+        if email:
+            classified[classification.importance].append(email)
 
     return classified
 
