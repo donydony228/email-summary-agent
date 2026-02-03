@@ -139,7 +139,9 @@ def generate_report(state: EmailSummaryState) -> dict:
     report += f"- 低重要性: {len(low_emails)} 封\n\n"
 
     report += "## 摘要內容\n\n"
-    report += f"{summary_text}\n\n"
+    # 處理 AI 返回的文本中的 \n 轉義序列
+    formatted_summary = summary_text.replace('\\n', '\n')
+    report += f"{formatted_summary}\n\n"
 
     if high_emails:
         report += "## 重要郵件列表\n\n"
