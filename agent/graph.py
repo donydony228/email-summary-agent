@@ -4,11 +4,14 @@ from typing import Annotated, NotRequired
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.types import interrupt
 
 ## EmailSummaryGraph:
 # ├── 郵件獲取節點 (Fetch Emails)
 # ├── 重要性分類節點 (Classify Importance)
 # ├── 內容摘要節點 (Summarize Content)
+# ├── 事件判斷節點 (Event Detection)
 # ├── 報告生成節點 (Generate Report)
 # └── 通知發送節點 (Send Notification)
 
@@ -31,6 +34,11 @@ class EmailSummaryState(TypedDict):
     # 摘要結果（可選）
     email_summaries: NotRequired[dict]
     # dict 包含: {summary, importance_count, important_emails}
+
+    # 事件判斷結果（可選）
+    detected_events: NotRequired[list[dict]]
+    confirmed_events: NotRequired[list[dict]]  # 用戶確認的事件
+    # dict 包含: ["事件標題", "相關信件標題", "起始時間", "結束時間", ...]
 
     # 最終輸出（可選）
     final_report: NotRequired[str]  # Markdown 格式的最終報告
@@ -114,6 +122,57 @@ def summarize_content(state: EmailSummaryState) -> dict:
 
     return {"email_summaries": summaries}
 
+def detect_events(state: EmailSummaryState) -> dict:
+    """判斷是否有重要事件"""
+    from services.event_service import detect_events_from_emails
+
+    raw_emails = state.get('raw_emails', [])
+
+    events = detect_events_from_emails(raw_emails)
+
+    return {"detected_events": events}
+
+def request_confirmation(state: EmailSummaryState) -> dict:
+    """請求用戶確認事件（中斷點）"""
+    events = state.get('detected_events', [])
+    
+    if not events:
+        return {"confirmed_events": []}
+    
+    # 發送 Slack 互動訊息
+    from services.slack_service import send_event_confirmation_request
+    message_ts = send_event_confirmation_request(events)
+    
+    # 中斷工作流，等待用戶回應
+    confirmed = interrupt({
+        "message": "等待用戶確認事件",
+        "events": events,
+        "message_ts": message_ts
+    })
+    
+    return {"confirmed_events": confirmed}
+
+def create_calendar_events(state: EmailSummaryState) -> dict:
+    """創建 Calendar 事件"""
+    confirmed_events = state.get('confirmed_events', [])
+    
+    if not confirmed_events:
+        return {"calendar_events_created": []}
+    
+    from services.calendar_service import create_calendar_event
+    
+    created_ids = []
+    for event_id in confirmed_events:
+        # 從 detected_events 中找到完整事件資料
+        events = state.get('detected_events', [])
+        event = next(e for e in events if e['id'] == event_id)
+        
+        # 創建 Calendar 事件
+        calendar_id = create_calendar_event(event)
+        created_ids.append(calendar_id)
+    
+    return {"calendar_events_created": created_ids}
+
 def generate_report(state: EmailSummaryState) -> dict:
     """生成最終報告"""
     import datetime
@@ -143,6 +202,14 @@ def generate_report(state: EmailSummaryState) -> dict:
     formatted_summary = summary_text.replace('\\n', '\n')
     report += f"{formatted_summary}\n\n"
 
+    report += "## 事件列表\n\n"
+    events = state.get('events', [])
+    if events:
+        for event in events:
+            report += f"- {event}\n"
+    else:
+        report += "無檢測到的事件。\n"
+
     if high_emails:
         report += "## 重要郵件列表\n\n"
         for email in high_emails:
@@ -171,6 +238,9 @@ builder = StateGraph(EmailSummaryState)
 builder.add_node("fetch_emails", fetch_emails)
 builder.add_node("classify_importance", classify_importance)
 builder.add_node("summarize_content", summarize_content)
+builder.add_node("detect_events", detect_events)
+builder.add_node("request_confirmation", request_confirmation)
+builder.add_node("create_calendar_events", create_calendar_events)
 builder.add_node("generate_report", generate_report)
 builder.add_node("send_notification", send_notification)
 
@@ -178,15 +248,27 @@ builder.add_node("send_notification", send_notification)
 builder.add_edge(START, "fetch_emails")
 builder.add_edge("fetch_emails", "classify_importance")
 builder.add_edge("classify_importance", "summarize_content")
-builder.add_edge("summarize_content", "generate_report")
+builder.add_edge("summarize_content", "detect_events")
+
+# 條件路由：有事件 → 請求確認；無事件 → 跳到報告
+def should_request_confirmation(state: EmailSummaryState) -> str:
+    events = state.get('detected_events', [])
+    return "request_confirmation" if events else "generate_report"
+
+builder.add_conditional_edges(
+    "detect_events",
+    should_request_confirmation,
+    {
+        "request_confirmation": "request_confirmation",
+        "generate_report": "generate_report"
+    }
+)
+
+builder.add_edge("request_confirmation", "create_calendar_events")
+builder.add_edge("create_calendar_events", "generate_report")
 builder.add_edge("generate_report", "send_notification")
 builder.add_edge("send_notification", END)
 
-# 3. 設定入口節點（可選，如果只有一個入口可省略）
-# builder.set_entry_point("fetch_emails")
-
-# 4. 設定結束節點（可選，已經用 add_edge 到 END 了）
-# builder.set_finish_point("send_notification")
-
-# Compile graph
-graph = builder.compile()
+# 5. 編譯 graph（使用 checkpointer）
+checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
+graph = builder.compile(checkpointer=checkpointer)

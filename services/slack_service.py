@@ -39,7 +39,6 @@ def _convert_markdown_to_slack(markdown_text: str) -> str:
 
     return '\n'.join(converted_lines)
 
-
 def send_slack_notification(report: str) -> bool:
     """發送 Slack 通知
 
@@ -74,3 +73,59 @@ def send_slack_notification(report: str) -> bool:
 
     except requests.exceptions.RequestException:
         return False
+
+def send_event_confirmation_request(events: list[dict]) -> str:
+    """發送事件確認請求（Slack 互動訊息）"""
+    from slack_sdk import WebClient
+
+    client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
+    channel_id = os.getenv('SLACK_CHANNEL_ID')
+
+    blocks = [
+        {
+            "type": "header",
+            "text": {
+                "type": "plain_text",
+                "text": "檢測到行程/事件，請確認是否加入日曆"
+            }
+        },
+        {"type": "divider"}
+    ]
+
+    for event in events:
+        blocks.extend([
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{event['title']}*\n時間: {event['start_time']} - {event['end_time']}\n地點: {event.get('location', '無')}"
+                }
+            },
+            {
+                "type": "actions",
+                "block_id": f"event_{event['id']}",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "確認加入"},
+                        "style": "primary",
+                        "value": event['id'],
+                        "action_id": "confirm_event"
+                    },
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "跳過"},
+                        "style": "danger",
+                        "value": event['id'],
+                        "action_id": "skip_event"
+                    }
+                ]
+            }
+        ])
+
+    response = client.chat_postMessage(
+        channel=channel_id,
+        blocks=blocks
+    )
+
+    return response['ts']  # message timestamp
