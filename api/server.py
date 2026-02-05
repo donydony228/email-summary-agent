@@ -10,6 +10,10 @@ import hashlib
 import json
 from urllib.parse import parse_qs
 
+# ⚠️ 重要：在導入 graph 之前先初始化 credentials
+from init_credentials import init_credentials
+init_credentials()
+
 from agent.graph import graph  # 導入 compiled graph
 
 app = FastAPI()
