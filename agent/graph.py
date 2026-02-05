@@ -270,5 +270,9 @@ builder.add_edge("generate_report", "send_notification")
 builder.add_edge("send_notification", END)
 
 # 5. 編譯 graph（使用 checkpointer）
-checkpointer = SqliteSaver.from_conn_string("checkpoints.db")
+import sqlite3
+
+# 創建持久化的 SQLite 連接和 checkpointer
+conn = sqlite3.connect("checkpoints.db", check_same_thread=False)
+checkpointer = SqliteSaver(conn)
 graph = builder.compile(checkpointer=checkpointer)
