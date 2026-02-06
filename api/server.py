@@ -34,14 +34,21 @@ def verify_slack_signature(timestamp: str, body: str, signature: str) -> bool:
     return hmac.compare_digest(expected_signature, signature)
 
 
-def process_slack_interaction_background(action_id: str, event_id: str):
+def process_slack_interaction_background(action_id: str, event_id: str, channel: str, message_ts: str, original_blocks: list):
     """後台處理 Slack 互動（避免超時）"""
+    from slack_sdk import WebClient
+
+    client = WebClient(token=os.getenv('SLACK_BOT_TOKEN'))
+
     try:
         thread_id = {"configurable": {"thread_id": "email-summary-run"}}
 
         if action_id == "confirm_event":
             # 用戶確認，更新狀態並恢復工作流
             print(f"用戶確認事件: {event_id}")
+            status_emoji = "✅"
+            status_text = "已確認加入"
+
             graph.update_state(
                 thread_id,
                 {"confirmed_events": [event_id]},
@@ -50,6 +57,9 @@ def process_slack_interaction_background(action_id: str, event_id: str):
         else:
             # 用戶跳過
             print(f"用戶跳過事件: {event_id}")
+            status_emoji = "⏭️"
+            status_text = "已略過"
+
             graph.update_state(
                 thread_id,
                 {"confirmed_events": []},
@@ -61,6 +71,38 @@ def process_slack_interaction_background(action_id: str, event_id: str):
             print(f"工作流執行中: {list(event.keys())}")
 
         print("工作流恢復完成")
+
+        # 更新原始訊息，將處理的事件標記為已完成
+        updated_blocks = []
+        event_found = False
+
+        for block in original_blocks:
+            if block.get("block_id") == f"event_{event_id}":
+                # 找到對應的事件按鈕區塊，替換為狀態訊息
+                event_found = True
+                updated_blocks.append({
+                    "type": "context",
+                    "elements": [
+                        {
+                            "type": "mrkdwn",
+                            "text": f"{status_emoji} *{status_text}*"
+                        }
+                    ]
+                })
+            else:
+                # 保留其他區塊
+                updated_blocks.append(block)
+
+        if event_found:
+            # 更新 Slack 訊息
+            client.chat_update(
+                channel=channel,
+                ts=message_ts,
+                blocks=updated_blocks,
+                text=f"事件處理完成"  # fallback text
+            )
+            print(f"✓ Slack 訊息已更新（事件 {event_id}）")
+
     except Exception as e:
         print(f"處理 Slack 互動時出錯: {e}")
         import traceback
@@ -105,6 +147,11 @@ async def handle_slack_interaction(request: Request, background_tasks: Backgroun
     action_id = action['action_id']  # "confirm_event" 或 "skip_event"
     event_id = action['value']  # event ID
 
+    # 提取原始訊息資訊（用於更新 UI）
+    channel = payload['channel']['id']
+    message_ts = payload['message']['ts']
+    original_blocks = payload['message']['blocks']
+
     # **立即回應** Slack（避免超時）
     response_text = f"收到！正在{'確認' if action_id == 'confirm_event' else '跳過'}事件..."
 
@@ -112,7 +159,10 @@ async def handle_slack_interaction(request: Request, background_tasks: Backgroun
     background_tasks.add_task(
         process_slack_interaction_background,
         action_id,
-        event_id
+        event_id,
+        channel,
+        message_ts,
+        original_blocks
     )
 
     # 3 秒內回應 Slack
