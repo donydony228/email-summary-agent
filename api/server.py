@@ -79,6 +79,14 @@ async def handle_slack_interaction(request: Request, background_tasks: Backgroun
     body_str = body.decode()
     headers = request.headers
 
+    # 處理 Slack URL 驗證（首次設置 Interactivity URL 時）
+    try:
+        data = json.loads(body_str)
+        if data.get('type') == 'url_verification':
+            return JSONResponse({"challenge": data.get('challenge')})
+    except:
+        pass  # 不是 JSON 格式，繼續處理 form-encoded payload
+
     # 驗證簽名
     if not verify_slack_signature(
         headers.get('x-slack-request-timestamp', ''),
