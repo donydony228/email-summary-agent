@@ -25,23 +25,41 @@ SCOPES = [
 
 
 def authenticate(credentials_path: str = 'credentials.json',
-                token_path: str = 'token.json') -> Credentials:
+                token_path: str = 'token.json',
+                credentials_base64_env: str = None,
+                token_base64_env: str = None) -> Credentials:
     """
     Gmail API 認證
+
+    優先從環境變量讀取 base64 編碼的 credentials/token
+    如果環境變量不存在，則從文件讀取
 
     Args:
         credentials_path: OAuth 2.0 憑證檔案路徑
         token_path: Token 儲存路徑
+        credentials_base64_env: Credentials base64 環境變量名稱
+        token_base64_env: Token base64 環境變量名稱
 
     Returns:
         Credentials: 認證憑證
     """
     creds = None
 
-    # 檢查是否已有 token
-    if os.path.exists(token_path):
+    # 優先從環境變量讀取 token
+    if token_base64_env and os.getenv(token_base64_env):
+        try:
+            print(f"從環境變量 {token_base64_env} 讀取 token...")
+            token_data = base64.b64decode(os.getenv(token_base64_env))
+            creds = pickle.loads(token_data)
+            print("✓ Token 從環境變量加載成功")
+        except Exception as e:
+            print(f"從環境變量讀取 token 失敗: {e}")
+            creds = None
+    # 否則從文件讀取
+    elif os.path.exists(token_path):
         with open(token_path, 'rb') as token:
             creds = pickle.load(token)
+        print(f"✓ Token 從文件 {token_path} 加載成功")
 
     # 如果沒有有效憑證，進行授權流程
     if not creds or not creds.valid:
@@ -50,39 +68,68 @@ def authenticate(credentials_path: str = 'credentials.json',
             print("Token 已過期，正在更新...")
             creds.refresh(Request())
         else:
-            # 需要重新授權
-            print("首次使用或 Token 無效，開始授權流程...")
-            if not os.path.exists(credentials_path):
+            # 需要重新授權 - 從環境變量或文件讀取 credentials
+            print("需要重新授權...")
+
+            # 優先從環境變量讀取 credentials
+            if credentials_base64_env and os.getenv(credentials_base64_env):
+                try:
+                    print(f"從環境變量 {credentials_base64_env} 讀取 credentials...")
+                    import json
+                    import tempfile
+                    cred_data = base64.b64decode(os.getenv(credentials_base64_env))
+                    cred_json = json.loads(cred_data)
+
+                    # 創建臨時文件供 InstalledAppFlow 使用
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                        json.dump(cred_json, f)
+                        temp_cred_path = f.name
+
+                    flow = InstalledAppFlow.from_client_secrets_file(temp_cred_path, SCOPES)
+                    creds = flow.run_local_server(port=0)
+
+                    os.unlink(temp_cred_path)  # 刪除臨時文件
+                    print("✓ 從環境變量授權成功")
+                except Exception as e:
+                    raise Exception(f"從環境變量授權失敗: {e}")
+            # 否則從文件讀取
+            elif os.path.exists(credentials_path):
+                flow = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES)
+                creds = flow.run_local_server(port=0)
+                print(f"✓ 從文件 {credentials_path} 授權成功")
+            else:
                 raise FileNotFoundError(
                     f"找不到憑證檔案: {credentials_path}\n"
+                    f"也沒有設置環境變量: {credentials_base64_env}\n"
                     f"請從 Google Cloud Console 下載 OAuth 2.0 憑證"
                 )
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-                credentials_path, SCOPES)
-            creds = flow.run_local_server(port=0)
-
-        # 儲存 token 供下次使用
-        with open(token_path, 'wb') as token:
-            pickle.dump(creds, token)
-        print("授權成功！")
+        # 儲存 token 供下次使用（僅當使用文件模式時）
+        if not token_base64_env and token_path:
+            with open(token_path, 'wb') as token:
+                pickle.dump(creds, token)
+            print(f"Token 已保存到 {token_path}")
 
     return creds
 
 
 def get_gmail_service(credentials_path: str = 'credentials.json',
-                     token_path: str = 'token.json'):
+                     token_path: str = 'token.json',
+                     credentials_base64_env: str = None,
+                     token_base64_env: str = None):
     """
     建立 Gmail API 服務實例
 
     Args:
         credentials_path: OAuth 2.0 憑證檔案路徑
         token_path: Token 儲存路徑
+        credentials_base64_env: Credentials base64 環境變量名稱
+        token_base64_env: Token base64 環境變量名稱
 
     Returns:
         Gmail API 服務實例
     """
-    creds = authenticate(credentials_path, token_path)
+    creds = authenticate(credentials_path, token_path, credentials_base64_env, token_base64_env)
 
     try:
         service = build('gmail', 'v1', credentials=creds)
@@ -278,7 +325,9 @@ def fetch_emails_from_gmail(time_range: str = '24h',
                             query: str = '',
                             credentials_path: str = 'credentials.json',
                             token_path: str = 'token.json',
-                            account_label: Optional[str] = None) -> List[Dict]:
+                            account_label: Optional[str] = None,
+                            credentials_base64_env: str = None,
+                            token_base64_env: str = None) -> List[Dict]:
     """
     從 Gmail 獲取郵件（完整流程）
 
@@ -289,6 +338,8 @@ def fetch_emails_from_gmail(time_range: str = '24h',
         credentials_path: OAuth 2.0 憑證檔案路徑
         token_path: Token 儲存路徑
         account_label: 帳號標籤（用於多帳號場景）
+        credentials_base64_env: Credentials base64 環境變量名稱
+        token_base64_env: Token base64 環境變量名稱
 
     Returns:
         List[Dict]: 郵件列表
@@ -301,7 +352,7 @@ def fetch_emails_from_gmail(time_range: str = '24h',
         token_path = os.getenv('GMAIL_TOKEN_PATH', token_path)
 
     # 建立服務
-    service = get_gmail_service(credentials_path, token_path)
+    service = get_gmail_service(credentials_path, token_path, credentials_base64_env, token_base64_env)
 
     # 獲取郵件
     emails = fetch_emails(service, time_range, max_emails, query)
@@ -367,15 +418,14 @@ def fetch_emails_from_multiple_accounts(
         label = account.get('label', f'Account {i}')
         credentials_path = account.get('credentials_path')
         token_path = account.get('token_path')
-
-        if not credentials_path or not token_path:
-            print(f"帳號 [{label}] 缺少必要設定，跳過")
-            continue
+        credentials_base64_env = account.get('credentials_base64_env')
+        token_base64_env = account.get('token_base64_env')
 
         print(f"[{i}/{len(accounts)}] 正在獲取帳號: {label}")
-        print(f"   Credentials: {credentials_path}")
-        print(f"   Email name: {label}")
-        print(f"   Token: {token_path}")
+        if credentials_base64_env and token_base64_env:
+            print(f"   使用環境變量: {credentials_base64_env}, {token_base64_env}")
+        else:
+            print(f"   使用文件: {credentials_path}, {token_path}")
 
         try:
             # 獲取該帳號的郵件
@@ -385,14 +435,18 @@ def fetch_emails_from_multiple_accounts(
                 query=query,
                 credentials_path=credentials_path,
                 token_path=token_path,
-                account_label=label
+                account_label=label,
+                credentials_base64_env=credentials_base64_env,
+                token_base64_env=token_base64_env
             )
 
             all_emails.extend(emails)
-            print(f"帳號 [{label}] 獲取成功: {len(emails)} 封郵件\n")
+            print(f"✓ 帳號 [{label}] 獲取成功: {len(emails)} 封郵件\n")
 
         except Exception as e:
-            print(f"帳號 [{label}] 獲取失敗: {e}\n")
+            print(f"✗ 帳號 [{label}] 獲取失敗: {e}\n")
+            import traceback
+            traceback.print_exc()
             continue
 
     print(f"{'=' * 60}")

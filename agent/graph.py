@@ -68,17 +68,23 @@ def fetch_emails(state: EmailSummaryState) -> dict:
             {
                 'label': '個人',
                 'credentials_path': 'credentials/credentials_account1.json',
-                'token_path': 'credentials/token_account1.json'
+                'token_path': 'credentials/token_account1.json',
+                'credentials_base64_env': 'GMAIL_CREDENTIALS_ACCOUNT1_BASE64',
+                'token_base64_env': 'GMAIL_TOKEN_ACCOUNT1_BASE64'
             },
             {
                 'label': '工作',
                 'credentials_path': 'credentials/credentials_account2.json',
-                'token_path': 'credentials/token_account2.json'
+                'token_path': 'credentials/token_account2.json',
+                'credentials_base64_env': 'GMAIL_CREDENTIALS_ACCOUNT2_BASE64',
+                'token_base64_env': 'GMAIL_TOKEN_ACCOUNT2_BASE64'
             },
             {
                 'label': '紐約大學',
                 'credentials_path': 'credentials/credentials_account3.json',
-                'token_path': 'credentials/token_account3.json'
+                'token_path': 'credentials/token_account3.json',
+                'credentials_base64_env': 'GMAIL_CREDENTIALS_ACCOUNT3_BASE64',
+                'token_base64_env': 'GMAIL_TOKEN_ACCOUNT3_BASE64'
             }
         ]
 
