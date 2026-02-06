@@ -32,4 +32,3 @@ schedule
 slack-sdk
 fastapi
 uvicorn
-langgraph-checkpoint-sqlite

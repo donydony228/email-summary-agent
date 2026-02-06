@@ -7,7 +7,6 @@ import os
 import base64
 import pickle
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
 from typing import List, Dict, Optional
 
 from google.auth.transport.requests import Request

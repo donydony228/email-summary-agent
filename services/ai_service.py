@@ -2,7 +2,6 @@
 # 處理與 AI API 的交互，包含分類和摘要功能
 import os, getpass
 from langchain_openai import ChatOpenAI
-from langgraph.graph import MessagesState
 from pydantic import BaseModel, Field
 from typing import List, Literal
 from langchain_core.messages import HumanMessage, SystemMessage

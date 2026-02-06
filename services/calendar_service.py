@@ -5,8 +5,6 @@ Google Calendar API 服務
 import os
 import pickle
 import base64
-import json
-import tempfile
 from datetime import datetime
 from typing import Optional
 
@@ -173,37 +171,4 @@ def create_calendar_event(event_data: dict) -> str:
 
     except HttpError as error:
         print(f'創建 Calendar 事件失敗: {error}')
-        raise
-
-
-def list_upcoming_events(max_results: int = 10) -> list:
-    """
-    列出即將到來的日曆事件
-
-    Args:
-        max_results: 最多返回事件數
-
-    Returns:
-        list: 事件列表
-    """
-    token_base64_env = os.getenv('GOOGLE_CALENDAR_TOKEN_BASE64')
-    service = get_calendar_service(
-        token_base64_env='GOOGLE_CALENDAR_TOKEN_BASE64' if token_base64_env else None
-    )
-
-    try:
-        now = datetime.utcnow().isoformat() + 'Z'  # 'Z' 表示 UTC 時間
-        events_result = service.events().list(
-            calendarId='primary',
-            timeMin=now,
-            maxResults=max_results,
-            singleEvents=True,
-            orderBy='startTime'
-        ).execute()
-
-        events = events_result.get('items', [])
-        return events
-
-    except HttpError as error:
-        print(f'獲取 Calendar 事件失敗: {error}')
         raise
