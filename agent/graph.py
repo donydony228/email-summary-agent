@@ -218,14 +218,6 @@ def generate_report(state: EmailSummaryState) -> dict:
     formatted_summary = summary_text.replace('\\n', '\n')
     report += f"{formatted_summary}\n\n"
 
-    report += "## 事件列表\n\n"
-    events = state.get('events', [])
-    if events:
-        for event in events:
-            report += f"- {event}\n"
-    else:
-        report += "無檢測到的事件。\n"
-
     if high_emails:
         report += "## 重要郵件列表\n\n"
         for email in high_emails:
