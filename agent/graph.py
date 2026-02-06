@@ -255,25 +255,25 @@ builder.add_edge(START, "fetch_emails")
 builder.add_edge("fetch_emails", "classify_importance")
 builder.add_edge("classify_importance", "summarize_content")
 builder.add_edge("summarize_content", "detect_events")
+builder.add_edge("detect_events", "generate_report")
+builder.add_edge("generate_report", "send_notification")
 
-# 條件路由：有事件 → 請求確認；無事件 → 跳到報告
+# 條件路由：發送通知後，如果有事件 → 請求確認；無事件 → 結束
 def should_request_confirmation(state: EmailSummaryState) -> str:
     events = state.get('detected_events', [])
-    return "request_confirmation" if events else "generate_report"
+    return "request_confirmation" if events else "end"
 
 builder.add_conditional_edges(
-    "detect_events",
+    "send_notification",
     should_request_confirmation,
     {
         "request_confirmation": "request_confirmation",
-        "generate_report": "generate_report"
+        "end": END
     }
 )
 
 builder.add_edge("request_confirmation", "create_calendar_events")
-builder.add_edge("create_calendar_events", "generate_report")
-builder.add_edge("generate_report", "send_notification")
-builder.add_edge("send_notification", END)
+builder.add_edge("create_calendar_events", END)
 
 # 5. 編譯 graph（使用 checkpointer）
 import sqlite3
