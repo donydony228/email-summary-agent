@@ -123,8 +123,13 @@ def send_event_confirmation_request(events: list[dict]) -> str:
             }
         ])
 
+    # 準備 fallback text（用於通知預覽和可訪問性）
+    event_titles = [event['title'] for event in events]
+    fallback_text = f"檢測到 {len(events)} 個行程/事件：{', '.join(event_titles)}"
+
     response = client.chat_postMessage(
         channel=channel_id,
+        text=fallback_text,  # 添加 fallback text
         blocks=blocks
     )
 
