@@ -161,21 +161,31 @@ def request_confirmation(state: EmailSummaryState) -> dict:
 def create_calendar_events(state: EmailSummaryState) -> dict:
     """創建 Calendar 事件"""
     confirmed_events = state.get('confirmed_events', [])
-    
+
     if not confirmed_events:
         return {"calendar_events_created": []}
-    
+
     from services.calendar_service import create_calendar_event
-    
+
     created_ids = []
     for event_id in confirmed_events:
         # 從 detected_events 中找到完整事件資料
         events = state.get('detected_events', [])
-        event = next(e for e in events if e['id'] == event_id)
-        
+        event = next((e for e in events if e['id'] == event_id), None)
+
+        if not event:
+            print(f"警告：找不到事件 ID: {event_id}")
+            continue
+
         # 創建 Calendar 事件
-        calendar_id = create_calendar_event(event)
-        created_ids.append(calendar_id)
+        try:
+            calendar_id = create_calendar_event(event)
+            created_ids.append(calendar_id)
+            print(f"✓ 成功創建 Calendar 事件: {event.get('title')}")
+        except Exception as e:
+            print(f"✗ 創建 Calendar 事件失敗: {e}")
+            import traceback
+            traceback.print_exc()
     
     return {"calendar_events_created": created_ids}
 
