@@ -23,31 +23,31 @@ class EmailSummaryState(TypedDict):
     time_range: str  # "24h", "7d", "30d" 等
     max_emails: int  # 最多處理幾封郵件
 
-    # 郵件資料（可選，執行時產生）
+    # 郵件資料
     raw_emails: NotRequired[list[dict]]  # Gmail API 回傳的原始郵件
     # 每個 dict 包含: {id, subject, sender, body, date, ...}
 
-    # 分類結果（可選）
+    # 分類結果
     classified_emails: NotRequired[dict[str, list[dict]]]
     # 格式: {"high": [...], "medium": [...], "low": [...]}
 
-    # 摘要結果（可選）
+    # 摘要結果
     email_summaries: NotRequired[dict]
     # dict 包含: {summary, importance_count, important_emails}
 
-    # 事件判斷結果（可選）
+    # 事件判斷結果
     detected_events: NotRequired[list[dict]]
     confirmed_events: NotRequired[list[dict]]  # 用戶確認的事件
     # dict 包含: ["事件標題", "相關信件標題", "起始時間", "結束時間", ...]
 
-    # 最終輸出（可選）
+    # 最終輸出
     final_report: NotRequired[str]  # Markdown 格式的最終報告
     report_sent: NotRequired[bool]  # 是否已成功發送
 
-    # 執行記錄（可選）
+    # 執行記錄
     messages: NotRequired[Annotated[list[str], add_messages]]  # 執行日誌
 
-    # 錯誤處理（可選）
+    # 錯誤處理
     error: NotRequired[str | None]
     retry_count: NotRequired[int]
 
@@ -181,9 +181,9 @@ def create_calendar_events(state: EmailSummaryState) -> dict:
         try:
             calendar_id = create_calendar_event(event)
             created_ids.append(calendar_id)
-            print(f"✓ 成功創建 Calendar 事件: {event.get('title')}")
+            print(f"成功創建 Calendar 事件: {event.get('title')}")
         except Exception as e:
-            print(f"✗ 創建 Calendar 事件失敗: {e}")
+            print(f"創建 Calendar 事件失敗: {e}")
             import traceback
             traceback.print_exc()
     
@@ -242,7 +242,7 @@ def send_notification(state: EmailSummaryState) -> dict:
 # Build graph
 builder = StateGraph(EmailSummaryState)
 
-# 1. 加入所有節點
+# 加入所有節點
 builder.add_node("fetch_emails", fetch_emails)
 builder.add_node("classify_importance", classify_importance)
 builder.add_node("summarize_content", summarize_content)
@@ -252,7 +252,7 @@ builder.add_node("create_calendar_events", create_calendar_events)
 builder.add_node("generate_report", generate_report)
 builder.add_node("send_notification", send_notification)
 
-# 2. 定義執行流程（邊）
+# 定義執行流程（邊）
 builder.add_edge(START, "fetch_emails")
 builder.add_edge("fetch_emails", "classify_importance")
 builder.add_edge("classify_importance", "summarize_content")
